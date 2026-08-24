@@ -1,0 +1,66 @@
+name: 本免学科試験キャンセル監視
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "デバッグモード(artifacts保存)を有効にするか"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: license-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run monitor
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DEBUG: ${{ github.event.inputs.debug == 'true' && '1' || '0' }}
+        run: python scraper.py
+
+      - name: Upload debug artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-artifacts-${{ github.run_number }}
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Commit updated state.json
+        if: always()
+        run: |
+          git config user.name "license-watch-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if ! git diff --quiet -- state.json; then
+            git add state.json
+            git commit -m "chore: update state.json [skip ci]"
+            git push
+          else
+            echo "state.json に変更なし"
+          fi
