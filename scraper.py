@@ -4,19 +4,18 @@
 
 やること:
   1. START_URL を開く
-  2. 「教習所卒業等」→「免許証のみ」を選択
-  3. 対象試験場(府中/鮫洲/江東)を選択
-  4. カレンダーに表示されている選択可能な日付を順にクリック
+  2. 「教習所卒業等」→「免許証のみ」を選択(実際のDOM構造に基づく確実なID指定)
+  3. 対象試験場(府中/鮫洲/江東)を選択(value属性の部分一致で確実に指定)
+  4. jQuery UI の datepicker で選択可能(data-handler="selectDay")な日付だけを順にクリック
   5. 午前/午後それぞれの残席数(「残り○名」)を読み取る
   6. 前回の記録(state.json)と比較し、0名→1名以上になったスロットを検知
   7. 検知したら Discord へ通知
-  8. 予約操作(申込・確定ボタンのクリック)は一切行わない
+  8. 予約操作(氏名・生年月日等を入力する以降の画面へは絶対に進まない)
 
 このスクリプトは Playwright (Chromium) で動作する。
-サイトの実際のDOM構造は事前に確認できていないため、
-テキストベースの柔軟なロケータを優先し、想定外の構造に遭遇した場合は
-artifacts/ 以下にスクリーンショットとHTMLを保存してから
-「わからないものはスキップする」形で処理を続行する(全体を落とさない)。
+実際にサイトのHTML(artifacts経由で取得)を確認した上で、
+テキストの部分一致ではなく、ID・name・value・data属性など
+一意に特定できる情報を使って要素を探すようにしてある。
 """
 import re
 import sys
@@ -65,74 +64,94 @@ def is_forbidden_text(text: str) -> bool:
     return any(h in (text or "") for h in config.FORBIDDEN_BUTTON_TEXT_HINTS)
 
 
-def click_by_text(page: Page, text: str, timeout_ms: int = None) -> bool:
+def click_selector(page: Page, selector: str, description: str, timeout_ms: int = None) -> bool:
+    """CSSセレクタで一意に要素を指定してクリックする(見つからなければFalse)。"""
+    timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
+    try:
+        loc = page.locator(selector).first
+        loc.wait_for(state="visible", timeout=timeout_ms)
+        text = (loc.inner_text() or "").strip()
+        if is_forbidden_text(text):
+            raise RuntimeError(f"安全のため '{text}' のクリックは拒否しました(予約確定系の疑いがある文言)")
+        loc.click(timeout=timeout_ms)
+        time.sleep(config.ACTION_DELAY_SEC)
+        return True
+    except PWTimeout:
+        log(f"'{description}' ({selector}) が時間内に見つかりませんでした")
+        return False
+
+
+def click_venue(page: Page, venue: str, timeout_ms: int = None) -> bool:
     """
-    画面上の「テキストに一致する要素」をできるだけ柔軟にクリックする。
-    予約確定系のボタン(FORBIDDEN_BUTTON_TEXT_HINTS)には絶対に一致させない安全策込み。
-    見つからなければ False を返す(例外にしない=処理継続のため)。
+    試験場のラジオボタンを、value属性の部分一致(例: value="270:府中試験場")で
+    一意に特定してクリックする。テキストの部分一致だと、注釈文の中に
+    試験場名が複数回出てくるページがあり誤爆するため使わない。
     """
-    if is_forbidden_text(text):
-        raise RuntimeError(f"安全のため '{text}' のクリックは拒否しました(予約確定系の疑いがある文言)")
-
-    timeout_ms = timeout_ms or config.CLICK_PROBE_TIMEOUT_MS
-    candidates = [
-        lambda: page.get_by_role("button", name=text, exact=False),
-        lambda: page.get_by_role("radio", name=text, exact=False),
-        lambda: page.get_by_role("checkbox", name=text, exact=False),
-        lambda: page.get_by_role("link", name=text, exact=False),
-        lambda: page.get_by_label(text, exact=False),
-        lambda: page.get_by_text(text, exact=False),
-    ]
-    for make_locator in candidates:
-        try:
-            loc = make_locator().first
-            loc.wait_for(state="visible", timeout=timeout_ms)
-            el_text = (loc.inner_text() or "").strip()
-            if is_forbidden_text(el_text):
-                continue
-            loc.click(timeout=timeout_ms)
-            time.sleep(config.ACTION_DELAY_SEC)
-            return True
-        except PWTimeout:
-            continue
-        except Exception:
-            continue
-    return False
+    timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
+    selector = f'label:has(input[name="{config.VENUE_RADIO_NAME}"][value*="{venue}"])'
+    try:
+        loc = page.locator(selector).first
+        loc.wait_for(state="visible", timeout=timeout_ms)
+        loc.click(timeout=timeout_ms)
+        time.sleep(config.ACTION_DELAY_SEC)
+        return True
+    except PWTimeout:
+        log(f"試験場 '{venue}' の選択肢が時間内に見つかりませんでした")
+        return False
 
 
-def find_next_month_button(page: Page):
-    """カレンダーの「翌月へ」ボタンらしき要素を探す(複数の文言候補を試す)。"""
-    label_candidates = ["翌月", "次月", "次へ", "→", ">", "Next"]
-    for text in label_candidates:
-        try:
-            loc = page.get_by_role("button", name=text, exact=False).first
-            if loc.count() > 0 and loc.is_visible():
-                return loc
-        except Exception:
-            continue
-    return None
+def wait_for_calendar(page: Page, timeout_ms: int = None) -> bool:
+    """日付選択カレンダー(jQuery UI datepicker)が表示されるのを待つ。"""
+    timeout_ms = timeout_ms or config.NAV_TIMEOUT_MS
+    try:
+        page.locator("#datepicker table.ui-datepicker-calendar").wait_for(
+            state="visible", timeout=timeout_ms
+        )
+        return True
+    except PWTimeout:
+        return False
 
 
-def get_calendar_day_cells(page: Page):
+def get_selectable_day_cells(page: Page):
     """
-    カレンダー上の「選択可能な日付セル」を返す。
-    実際のマークアップが不明なため、複数の候補セレクタを順に試す。
+    カレンダー上の「本当に選択できる日付セル」だけを返す。
+    jQuery UI datepicker では、選択可能な日には data-handler="selectDay" が
+    付与され、選択不可の日は ui-datepicker-unselectable / ui-state-disabled
+    が付き、クリックしても何も起きない。
     """
-    selector_candidates = [
-        "[role='gridcell']:not([aria-disabled='true'])",
-        "td.is-selectable, td.selectable, td:not(.disabled):not(.is-disabled)",
-        "button.calendar-day:not([disabled])",
-        ".calendar-day:not(.disabled):not(.is-disabled)",
-    ]
-    for sel in selector_candidates:
-        try:
-            loc = page.locator(sel)
-            count = loc.count()
-            if count > 0:
-                return loc
-        except Exception:
-            continue
-    return None
+    return page.locator("#datepicker td[data-handler='selectDay']")
+
+
+def go_to_next_month(page: Page, timeout_ms: int = None) -> bool:
+    """
+    「次へ」リンクをクリックして翌月に進む。
+    既に進めない(無効化されている)場合は False を返す。
+    """
+    timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
+    nxt = page.locator("a.ui-datepicker-next:not(.ui-state-disabled)")
+    try:
+        if nxt.count() == 0:
+            return False
+        nxt.first.click(timeout=timeout_ms)
+        # 月が切り替わるのを待つ(カレンダーが再描画されるまでの猶予)
+        time.sleep(config.ACTION_DELAY_SEC)
+        return True
+    except PWTimeout:
+        return False
+
+
+def wait_for_time_panel(page: Page, timeout_ms: int = None) -> None:
+    """
+    日付クリック後、受付時間帯(午前/午後)の情報が表示されるのを待つ。
+    出ない場合もあるので、失敗しても例外にはしない(パネルが空のまま処理継続)。
+    """
+    timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
+    try:
+        page.locator("#visitTimeChoiceList").wait_for(state="visible", timeout=timeout_ms)
+        # ローディング表示(空き状況を調べています)が消えるのも待つ
+        page.locator("#waitVisitTimeList").wait_for(state="hidden", timeout=timeout_ms)
+    except PWTimeout:
+        pass
 
 
 def extract_seats_from_panel(panel_text: str):
@@ -184,71 +203,71 @@ def collect_venue_results(page: Page, venue: str) -> dict:
     time.sleep(config.ACTION_DELAY_SEC)
     dump_debug(page, f"{venue}_00_top")
 
-    ok = click_by_text(page, config.STEP_EXAM_TYPE_TEXT)
-    if not ok:
-        log(f"[{venue}] '{config.STEP_EXAM_TYPE_TEXT}' の選択肢が見つかりませんでした")
+    if not click_selector(page, config.EXAM_TYPE_SELECTOR, config.STEP_EXAM_TYPE_TEXT):
         dump_debug(page, f"{venue}_01_exam_type_notfound")
         return results
     dump_debug(page, f"{venue}_01_exam_type")
 
-    ok = click_by_text(page, config.STEP_LICENSE_FORM_TEXT)
-    if not ok:
-        log(f"[{venue}] '{config.STEP_LICENSE_FORM_TEXT}' の選択肢が見つかりませんでした")
+    if not click_selector(page, config.LICENSE_FORM_SELECTOR, config.STEP_LICENSE_FORM_TEXT):
         dump_debug(page, f"{venue}_02_license_form_notfound")
         return results
     dump_debug(page, f"{venue}_02_license_form")
 
-    ok = click_by_text(page, venue)
-    if not ok:
-        log(f"[{venue}] 試験場の選択肢が見つかりませんでした")
+    if not click_venue(page, venue):
         dump_debug(page, f"{venue}_03_venue_notfound")
         return results
     dump_debug(page, f"{venue}_03_venue_selected")
 
+    if not wait_for_calendar(page):
+        log(f"[{venue}] カレンダーが表示されませんでした")
+        dump_debug(page, f"{venue}_04_calendar_notfound")
+        return results
+
     for month_offset in range(config.MONTHS_AHEAD):
         if month_offset > 0:
-            nxt = find_next_month_button(page)
-            if nxt is None:
-                log(f"[{venue}] 翌月ボタンが見つからず、{month_offset}ヶ月目までで打ち切ります")
-                break
-            try:
-                nxt.click(timeout=config.ACTION_TIMEOUT_MS)
-                time.sleep(config.ACTION_DELAY_SEC)
-            except Exception as e:  # noqa: BLE001
-                log(f"[{venue}] 翌月ボタンのクリックに失敗: {e}")
+            if not go_to_next_month(page):
+                log(f"[{venue}] 翌月へ進めず、{month_offset}ヶ月目までで打ち切ります")
                 break
 
         dump_debug(page, f"{venue}_month{month_offset}_calendar")
 
-        cells = get_calendar_day_cells(page)
-        if cells is None:
-            log(f"[{venue}] 月{month_offset}: カレンダーの日付セルが見つかりませんでした")
-            continue
-
+        cells = get_selectable_day_cells(page)
         cell_count = cells.count()
         log(f"[{venue}] 月{month_offset}: 選択可能な日付セル {cell_count} 件を確認")
 
         for i in range(cell_count):
-            cell = cells.nth(i)
+            # 日付をクリックするたびにDOMが再描画されるため、
+            # 毎回セル一覧を取り直してから i 番目を参照する。
+            cell = get_selectable_day_cells(page).nth(i)
             try:
-                cell_text = (cell.inner_text() or "").strip()
-            except Exception:
-                continue
-            if is_forbidden_text(cell_text):
-                continue
-            try:
-                cell.click(timeout=config.ACTION_TIMEOUT_MS)
-                time.sleep(config.ACTION_DELAY_SEC)
+                data_year = cell.get_attribute("data-year")
+                data_month = cell.get_attribute("data-month")  # 0始まり(0=1月)
+                day_link = cell.locator("a").first
+                data_date = day_link.get_attribute("data-date")
             except Exception:
                 continue
 
+            if not (data_year and data_month is not None and data_date):
+                continue
+
             try:
-                panel_text = page.locator("body").inner_text()
+                day_link.click(timeout=config.ACTION_TIMEOUT_MS)
+            except Exception:
+                continue
+
+            wait_for_time_panel(page)
+
+            try:
+                panel_text = page.locator("#visitTimeList").inner_text()
             except Exception:
                 panel_text = ""
 
             seats = extract_seats_from_panel(panel_text)
-            date_str = extract_current_date_label(page, cell_text)
+
+            try:
+                date_str = f"{int(data_year):04d}-{int(data_month) + 1:02d}-{int(data_date):02d}"
+            except ValueError:
+                date_str = ""
 
             if date_str and (seats["am"] is not None or seats["pm"] is not None):
                 results.setdefault(date_str, {})
@@ -260,44 +279,6 @@ def collect_venue_results(page: Page, venue: str) -> dict:
                 dump_debug(page, f"{venue}_month{month_offset}_day{i}_unparsed")
 
     return results
-
-
-def extract_current_date_label(page: Page, cell_text: str) -> str:
-    """
-    画面上に表示されている年月見出し + クリックしたセルの日付テキストから
-    'YYYY-MM-DD' を組み立てる。見出しの取得方法もサイト構造が不明なため
-    複数候補を試す簡易実装。うまく取れない場合は空文字を返す。
-    """
-    day_match = re.search(r"(\d{1,2})", cell_text)
-    if not day_match:
-        return ""
-    day = int(day_match.group(1))
-
-    header_candidates = [
-        "h1", "h2", "h3", ".calendar-header", ".month-label", "[class*='month']",
-    ]
-    year, month = None, None
-    for sel in header_candidates:
-        try:
-            loc = page.locator(sel).first
-            if loc.count() == 0:
-                continue
-            text = loc.inner_text()
-            m = re.search(r"(\d{4})\D+(\d{1,2})", text)
-            if m:
-                year, month = int(m.group(1)), int(m.group(2))
-                break
-        except Exception:
-            continue
-
-    if year is None or month is None:
-        now = datetime.now(JST)
-        year, month = now.year, now.month
-
-    try:
-        return f"{year:04d}-{month:02d}-{day:02d}"
-    except Exception:
-        return ""
 
 
 def run_once() -> int:
@@ -329,6 +310,8 @@ def run_once() -> int:
                 traceback.print_exc()
                 dump_debug(page, f"{venue}_ERROR")
                 continue
+
+            log(f"[{venue}] {len(venue_results)} 日分のデータを取得しました")
 
             for date_str, seats in venue_results.items():
                 for ampm_key, ampm_label in (("am", "午前"), ("pm", "午後")):
