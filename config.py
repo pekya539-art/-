@@ -44,8 +44,10 @@ PM_TEXT = "午後"
 # 状態保存ファイル(0→1以上の遷移を検知するための前回結果を保存する)
 STATE_FILE = os.environ.get("STATE_FILE", "state.json")
 
-# 通知先 (Discord Webhook URL は GitHub Actions の Secrets 経由で環境変数に渡す)
-DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+# 通知先 (ntfy.sh の「トピック名」。GitHub Actions の Secrets 経由で環境変数に渡す)
+# ntfy はアカウント登録不要。スマホにntfyアプリを入れて、この名前のトピックを
+# 購読(subscribe)しておくだけで、ここにPOSTしたメッセージがプッシュ通知で届く。
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 
 # デバッグモード: 1 にするとステップごとにスクリーンショット/HTMLを artifacts/ に保存する
 DEBUG = os.environ.get("DEBUG", "0") == "1"
