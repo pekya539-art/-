@@ -9,6 +9,10 @@ import os
 # 対象サイト(本免学科試験 予約確認カレンダー・ログイン不要)
 START_URL = "https://license-test.tokyo-madoguchi-yoyaku.com/police-pref-tokyo/calendar/01/html/main.html?lang=ja"
 
+# サイト側が「リファラ(参照元)が空だとブロックする」仕様のため、
+# 同一サイト内のURLをリファラとして明示的に送る。
+REFERER = "https://license-test.tokyo-madoguchi-yoyaku.com/police-pref-tokyo/"
+
 # 画面遷移で選択するテキスト(サイト上の表示文言そのまま)
 STEP_EXAM_TYPE_TEXT = "教習所卒業等"          # 受験する項目を選択
 STEP_LICENSE_FORM_TEXT = "免許証のみ"          # 希望する免許保有形態
