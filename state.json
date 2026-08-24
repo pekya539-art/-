@@ -10,7 +10,7 @@
     },
     "府中試験場|2026-10-01|am": {
       "notified": true,
-      "seats": 7
+      "seats": 6
     },
     "府中試験場|2026-10-01|pm": {
       "notified": false,
@@ -18,7 +18,7 @@
     },
     "府中試験場|2026-10-02|am": {
       "notified": true,
-      "seats": 70
+      "seats": 69
     },
     "府中試験場|2026-10-02|pm": {
       "notified": true,
@@ -158,7 +158,7 @@
     },
     "府中試験場|2026-10-28|pm": {
       "notified": true,
-      "seats": 90
+      "seats": 89
     },
     "府中試験場|2026-10-29|am": {
       "notified": true,
@@ -194,15 +194,15 @@
     },
     "江東試験場|2026-10-01|am": {
       "notified": true,
-      "seats": 84
+      "seats": 82
     },
     "江東試験場|2026-10-01|pm": {
       "notified": true,
-      "seats": 40
+      "seats": 39
     },
     "江東試験場|2026-10-02|am": {
       "notified": true,
-      "seats": 99
+      "seats": 98
     },
     "江東試験場|2026-10-02|pm": {
       "notified": true,
@@ -230,7 +230,7 @@
     },
     "江東試験場|2026-10-07|pm": {
       "notified": true,
-      "seats": 90
+      "seats": 89
     },
     "江東試験場|2026-10-08|am": {
       "notified": true,
@@ -278,7 +278,7 @@
     },
     "江東試験場|2026-10-16|pm": {
       "notified": true,
-      "seats": 92
+      "seats": 91
     },
     "江東試験場|2026-10-19|am": {
       "notified": true,
@@ -370,11 +370,11 @@
     },
     "鮫洲試験場|2026-10-01|am": {
       "notified": true,
-      "seats": 34
+      "seats": 32
     },
     "鮫洲試験場|2026-10-01|pm": {
       "notified": true,
-      "seats": 21
+      "seats": 20
     },
     "鮫洲試験場|2026-10-02|am": {
       "notified": true,
@@ -382,19 +382,19 @@
     },
     "鮫洲試験場|2026-10-02|pm": {
       "notified": true,
-      "seats": 43
+      "seats": 42
     },
     "鮫洲試験場|2026-10-05|am": {
       "notified": true,
-      "seats": 47
+      "seats": 46
     },
     "鮫洲試験場|2026-10-05|pm": {
       "notified": true,
-      "seats": 53
+      "seats": 52
     },
     "鮫洲試験場|2026-10-06|am": {
       "notified": true,
-      "seats": 51
+      "seats": 50
     },
     "鮫洲試験場|2026-10-06|pm": {
       "notified": true,
@@ -537,5 +537,5 @@
       "seats": 58
     }
   },
-  "updated_at": "2026-08-25T01:06:58.546467+09:00"
+  "updated_at": "2026-08-25T02:53:23.022208+09:00"
 }
