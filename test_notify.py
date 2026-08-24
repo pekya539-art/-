@@ -1,25 +1,61 @@
 # -*- coding: utf-8 -*-
 """
-Discord Webhook が正しく設定されているかどうかだけを確認するための
-簡易テストスクリプト。実際のサイトへはアクセスしない。
+Discord Webhook への通知処理。
 """
-import sys
+import json
+import urllib.request
+import urllib.error
 
-import notify
+import config
 
 
-def main():
-    ok = notify.send_discord_message(
-        "🔔 テスト通知\n"
-        "本免学科試験キャンセル監視システムからのテストメッセージです。\n"
-        "これがDiscordに届いていれば、通知の設定は正常です。"
+def send_discord_message(text: str) -> bool:
+    """Discord Webhook にメッセージを送信する。成功したら True。"""
+    if not config.DISCORD_WEBHOOK_URL:
+        print("[notify] DISCORD_WEBHOOK_URL が未設定のため通知をスキップします。")
+        return False
+
+    payload = json.dumps({"content": text}).encode("utf-8")
+    req = urllib.request.Request(
+        config.DISCORD_WEBHOOK_URL,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            # DiscordはCloudflareの保護下にあり、既定のPython User-Agentだと
+            # ブロックされる(HTTP 403 / error code 1010)ため、ブラウザのふりをする。
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+            ),
+        },
+        method="POST",
     )
-    if ok:
-        print("[test_notify] 送信に成功しました。Discordを確認してください。")
-    else:
-        print("[test_notify] 送信に失敗しました。DISCORD_WEBHOOK_URL の設定を確認してください。")
-        sys.exit(1)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            ok = 200 <= resp.status < 300
+            if not ok:
+                print(f"[notify] Discord への送信に失敗しました status={resp.status}")
+            return ok
+    except urllib.error.HTTPError as e:
+        print(f"[notify] Discord への送信でHTTPエラー: {e.code} {e.read()}")
+        return False
+    except Exception as e:  # noqa: BLE001
+        print(f"[notify] Discord への送信で例外: {e}")
+        return False
 
 
-if __name__ == "__main__":
-    main()
+def build_vacancy_message(venue: str, date_str: str, ampm_label: str, seats: int) -> str:
+    """空席発生通知の本文を組み立てる。"""
+    return (
+        "🚨 **本免学科試験のキャンセル発生**\n"
+        f"試験場: {venue}\n"
+        f"日付: {date_str}\n"
+        f"時間帯: {ampm_label}\n"
+        f"残席数: {seats}名\n"
+        f"予約サイト: {config.START_URL}\n"
+        "※ このシステムは検知のみ行います。予約はご自身で早めに操作してください。"
+    )
+
+
+def build_error_message(detail: str) -> str:
+    return f"⚠️ 本免学科試験 監視システムでエラーが発生しました\n{detail}"
