@@ -52,29 +52,31 @@ def evaluate_slot(state: dict, venue: str, date_str: str, ampm: str, seats: int)
     最新の残席数を state に反映し、「今回通知すべきかどうか」を返す。
 
     ロジック:
-      - 前回 seats == 0 (or 未観測) かつ 今回 seats >= 1  -> 新規の空き発生
-        - まだ notified フラグが立っていなければ通知対象とし、notified=True にする
+      - 今回 seats >= 1 かつ まだ notified フラグが立っていない -> 通知対象
+        (notified フラグは、実際にDiscordへの送信が成功した後に
+         mark_notified() を呼んで初めて立てる。送信に失敗した場合は
+         notified=False のままなので、次回また通知を試みる=取りこぼしを防ぐ)
       - 今回 seats == 0                                    -> notified フラグを解除
         (次に空きが出たときにまた通知できるようにするため)
-      - それ以外(空きが続いている等)                        -> 通知しない
     """
     slots = state["slots"]
     key = slot_key(venue, date_str, ampm)
     prev = slots.get(key, {"seats": 0, "notified": False})
-    prev_seats = prev.get("seats", 0)
     prev_notified = prev.get("notified", False)
-
-    should_notify = False
 
     if seats <= 0:
         # 満席(0名)に戻った -> 次の空きに備えてリセット
         slots[key] = {"seats": 0, "notified": False}
-    else:
-        if prev_seats <= 0 and not prev_notified:
-            should_notify = True
-        slots[key] = {"seats": seats, "notified": True if should_notify or prev_notified else prev_notified}
-        # 通知した場合、または既に通知済みで空きが継続している場合は notified=True を維持
-        if should_notify:
-            slots[key]["notified"] = True
+        return False
 
+    should_notify = not prev_notified
+    # ここでは notified はまだ更新しない(送信が成功したら mark_notified で立てる)
+    slots[key] = {"seats": seats, "notified": prev_notified}
     return should_notify
+
+
+def mark_notified(state: dict, venue: str, date_str: str, ampm: str) -> None:
+    """Discordへの送信が実際に成功した後に呼び出し、notified フラグを確定させる。"""
+    key = slot_key(venue, date_str, ampm)
+    if key in state["slots"]:
+        state["slots"][key]["notified"] = True
