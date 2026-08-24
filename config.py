@@ -53,7 +53,12 @@ VENUE_DELAY_SEC = float(os.environ.get("VENUE_DELAY_SEC", "2.0"))
 NAV_TIMEOUT_MS = 20000
 ACTION_TIMEOUT_MS = 8000
 
+# click_by_text は複数の探し方(候補)を順番に試すため、1候補あたりの待ち時間は
+# 短くしておく(でないと候補6つ×8秒=最大48秒/回、のようになって全体が遅くなりすぎる)
+CLICK_PROBE_TIMEOUT_MS = 1200
+
 # 予約操作は一切行わない(このシステムの絶対条件)
 # -> クリックするのは「画面遷移用の選択肢」と「日付セル」のみ。
 #    「予約する」「進む」に類する確定系ボタンは絶対にクリックしないこと。
 FORBIDDEN_BUTTON_TEXT_HINTS = ["予約する", "確定", "申込", "この内容で予約"]
+
