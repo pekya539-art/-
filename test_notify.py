@@ -1,22 +1,25 @@
-name: Discord通知テスト
+# -*- coding: utf-8 -*-
+"""
+Discord Webhook が正しく設定されているかどうかだけを確認するための
+簡易テストスクリプト。実際のサイトへはアクセスしない。
+"""
+import sys
 
-on:
-  workflow_dispatch:
+import notify
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+def main():
+    ok = notify.send_discord_message(
+        "🔔 テスト通知\n"
+        "本免学科試験キャンセル監視システムからのテストメッセージです。\n"
+        "これがDiscordに届いていれば、通知の設定は正常です。"
+    )
+    if ok:
+        print("[test_notify] 送信に成功しました。Discordを確認してください。")
+    else:
+        print("[test_notify] 送信に失敗しました。DISCORD_WEBHOOK_URL の設定を確認してください。")
+        sys.exit(1)
 
-      - name: Send test Discord message
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python test_notify.py
+
+if __name__ == "__main__":
+    main()
