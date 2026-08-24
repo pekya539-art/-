@@ -9,7 +9,7 @@
   4. jQuery UI の datepicker で選択可能(data-handler="selectDay")な日付だけを順にクリック
   5. 午前/午後それぞれの残席数(「残り○名」)を読み取る
   6. 前回の記録(state.json)と比較し、0名→1名以上になったスロットを検知
-  7. 検知したら Discord へ通知
+  7. 検知したら Discord へ通知(送信成功が確認できたときだけ通知済みとして記録する)
   8. 予約操作(氏名・生年月日等を入力する以降の画面へは絶対に進まない)
 
 このスクリプトは Playwright (Chromium) で動作する。
@@ -324,7 +324,10 @@ def run_once() -> int:
                         sent = notify.send_discord_message(msg)
                         log(f"[NOTIFY] {venue} {date_str} {ampm_label} 残り{n}名 送信={'成功' if sent else '失敗'}")
                         if sent:
+                            state_store.mark_notified(state, venue, date_str, ampm_key)
                             notify_count += 1
+                        # 送信に失敗した場合は notified フラグを立てないので、
+                        # 次回の実行(最大5分後)で再度通知を試みる。
 
             time.sleep(config.VENUE_DELAY_SEC)
 
