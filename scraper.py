@@ -9,7 +9,7 @@
   4. jQuery UI の datepicker で選択可能(data-handler="selectDay")な日付だけを順にクリック
   5. 午前/午後それぞれの残席数(「残り○名」)を読み取る
   6. 前回の記録(state.json)と比較し、0名→1名以上になったスロットを検知
-  7. 検知したら Discord へ通知(送信成功が確認できたときだけ通知済みとして記録する)
+  7. 検知したら ntfy へ通知
   8. 予約操作(氏名・生年月日等を入力する以降の画面へは絶対に進まない)
 
 このスクリプトは Playwright (Chromium) で動作する。
@@ -321,7 +321,7 @@ def run_once() -> int:
                     should_notify = state_store.evaluate_slot(state, venue, date_str, ampm_key, n)
                     if should_notify:
                         msg = notify.build_vacancy_message(venue, date_str, ampm_label, n)
-                        sent = notify.send_discord_message(msg)
+                        sent = notify.send_notification(msg, priority="urgent")
                         log(f"[NOTIFY] {venue} {date_str} {ampm_label} 残り{n}名 送信={'成功' if sent else '失敗'}")
                         if sent:
                             state_store.mark_notified(state, venue, date_str, ampm_key)
@@ -344,7 +344,7 @@ def main():
     except Exception as e:  # noqa: BLE001
         log(f"致命的エラー: {e}")
         traceback.print_exc()
-        notify.send_discord_message(notify.build_error_message(f"{type(e).__name__}: {e}"))
+        notify.send_notification(notify.build_error_message(f"{type(e).__name__}: {e}"))
         sys.exit(1)
 
 
