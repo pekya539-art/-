@@ -74,7 +74,7 @@ def click_by_text(page: Page, text: str, timeout_ms: int = None) -> bool:
     if is_forbidden_text(text):
         raise RuntimeError(f"安全のため '{text}' のクリックは拒否しました(予約確定系の疑いがある文言)")
 
-    timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
+    timeout_ms = timeout_ms or config.CLICK_PROBE_TIMEOUT_MS
     candidates = [
         lambda: page.get_by_role("button", name=text, exact=False),
         lambda: page.get_by_role("radio", name=text, exact=False),
