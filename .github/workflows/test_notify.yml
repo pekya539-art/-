@@ -1,4 +1,4 @@
-name: Discord通知テスト
+name: ntfy通知テスト
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Send test Discord message
+      - name: Send test ntfy message
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python test_notify.py
