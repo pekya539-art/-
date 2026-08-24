@@ -145,8 +145,6 @@ def extract_seats_from_panel(panel_text: str):
     if not panel_text:
         return result
 
-    # 「午前試験」「午後試験」というブロック単位に大まかに分割して、
-    # それぞれのブロック内から「残り○名」を拾う。
     am_idx = panel_text.find(config.AM_TEXT)
     pm_idx = panel_text.find(config.PM_TEXT)
 
@@ -177,7 +175,12 @@ def collect_venue_results(page: Page, venue: str) -> dict:
     results = {}
 
     log(f"[{venue}] START_URL を開いています…")
-    page.goto(config.START_URL, timeout=config.NAV_TIMEOUT_MS, wait_until="domcontentloaded")
+    page.goto(
+        config.START_URL,
+        timeout=config.NAV_TIMEOUT_MS,
+        wait_until="domcontentloaded",
+        referer=config.REFERER,
+    )
     time.sleep(config.ACTION_DELAY_SEC)
     dump_debug(page, f"{venue}_00_top")
 
@@ -239,16 +242,12 @@ def collect_venue_results(page: Page, venue: str) -> dict:
             except Exception:
                 continue
 
-            # 日付クリック後に表示される受付時間帯パネルのテキストを取得
             try:
                 panel_text = page.locator("body").inner_text()
             except Exception:
                 panel_text = ""
 
             seats = extract_seats_from_panel(panel_text)
-
-            # 日付の特定: セルのテキストだけでは年月が分からないため、
-            # ページ上に表示されている見出し(年月)をあわせて読み取る。
             date_str = extract_current_date_label(page, cell_text)
 
             if date_str and (seats["am"] is not None or seats["pm"] is not None):
@@ -292,7 +291,6 @@ def extract_current_date_label(page: Page, cell_text: str) -> str:
             continue
 
     if year is None or month is None:
-        # 見出しから取れない場合、現在日時基準で概算(誤差が出る可能性あり)
         now = datetime.now(JST)
         year, month = now.year, now.month
 
@@ -318,6 +316,7 @@ def run_once() -> int:
                 "(KHTML, like Gecko) Chrome/124.0 Safari/537.36 "
                 "TokyoLicenseCancelWatch/1.0 (individual-use monitoring; contact via GitHub)"
             ),
+            extra_http_headers={"Referer": config.REFERER},
         )
         page = context.new_page()
         page.set_default_timeout(config.ACTION_TIMEOUT_MS)
