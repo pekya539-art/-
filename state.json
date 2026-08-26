@@ -138,11 +138,11 @@
     },
     "府中試験場|2026-10-05|am": {
       "notified": true,
-      "seats": 43
+      "seats": 42
     },
     "府中試験場|2026-10-05|pm": {
       "notified": true,
-      "seats": 15
+      "seats": 14
     },
     "府中試験場|2026-10-06|am": {
       "notified": true,
@@ -554,7 +554,7 @@
     },
     "江東試験場|2026-10-26|am": {
       "notified": true,
-      "seats": 114
+      "seats": 113
     },
     "江東試験場|2026-10-26|pm": {
       "notified": true,
@@ -648,6 +648,14 @@
       "notified": false,
       "seats": 0
     },
+    "鮫洲試験場|2026-09-25|am": {
+      "notified": false,
+      "seats": 0
+    },
+    "鮫洲試験場|2026-09-25|pm": {
+      "notified": false,
+      "seats": 0
+    },
     "鮫洲試験場|2026-09-28|am": {
       "notified": false,
       "seats": 0
@@ -690,7 +698,7 @@
     },
     "鮫洲試験場|2026-10-05|am": {
       "notified": true,
-      "seats": 30
+      "seats": 29
     },
     "鮫洲試験場|2026-10-05|pm": {
       "notified": true,
@@ -841,5 +849,5 @@
       "seats": 58
     }
   },
-  "updated_at": "2026-08-26T18:26:58.705819+09:00"
+  "updated_at": "2026-08-26T18:32:15.204400+09:00"
 }
