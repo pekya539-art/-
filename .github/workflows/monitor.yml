@@ -2,7 +2,6 @@ name: 本免学科試験キャンセル監視
 
 on:
   schedule:
-    # 5分間隔(UTC基準。GitHub Actionsの仕様上、実際の実行は数分遅延することがある)
     - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
@@ -10,12 +9,16 @@ on:
         description: "デバッグモード(artifacts保存)を有効にするか"
         type: boolean
         default: false
+      venue:
+        description: "チェックする試験場(空なら全試験場)"
+        type: string
+        default: ""
 
 permissions:
   contents: write
 
 concurrency:
-  group: license-watch
+  group: license-watch-${{ github.event.inputs.venue || 'all' }}
   cancel-in-progress: false
 
 jobs:
@@ -42,6 +45,7 @@ jobs:
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           DEBUG: ${{ github.event.inputs.debug == 'true' && '1' || '0' }}
+          TARGET_VENUE: ${{ github.event.inputs.venue }}
         run: python scraper.py
 
       - name: Upload debug artifacts
@@ -61,7 +65,15 @@ jobs:
           if ! git diff --quiet -- state.json; then
             git add state.json
             git commit -m "chore: update state.json [skip ci]"
-            git push
+            for i in 1 2 3 4 5; do
+              if git push; then
+                echo "push succeeded"
+                break
+              fi
+              echo "push failed, retrying after pulling latest ($i)"
+              git pull --rebase origin main || true
+              sleep 3
+            done
           else
             echo "state.json に変更なし"
           fi
