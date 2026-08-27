@@ -37,8 +37,9 @@ VENUES = [_target_venue] if _target_venue else ALL_VENUES
 
 VENUE_RADIO_NAME = "placeChoice"
 
-# 何ヶ月先まで見るか(現状は1ヶ月先まで埋まっている想定なので少し余裕を持たせる)
-MONTHS_AHEAD = 3
+# 何ヶ月先まで見るか(環境変数で上書き可能。指定が無ければ3)
+_months_ahead_env = os.environ.get("MONTHS_AHEAD", "").strip()
+MONTHS_AHEAD = int(_months_ahead_env) if _months_ahead_env else 3
 
 # 残席テキストのパターン 例:「従来の免許証 残り9名」「残り0名」
 SEAT_TEXT_REGEX = r"残り\s*(\d+)\s*名"
