@@ -21,14 +21,20 @@ EXAM_TYPE_SELECTOR = "#MKAYMA01M025"
 STEP_LICENSE_FORM_TEXT = "免許証のみ"          # ログ表示用
 LICENSE_FORM_SELECTOR = "#MKAYMA01M130"
 
-# 監視する試験場(表示名はサイト上の文言と一致させること)
+# 監視する試験場の全リスト(表示名はサイト上の文言と一致させること)
 # 実際のHTMLでは <input name="placeChoice" value="270:府中試験場"> のように
 # 「コード:試験場名」という値になっているため、value に部分一致させて選ぶ。
-VENUES = [
+ALL_VENUES = [
     "府中試験場",
     "鮫洲試験場",
     "江東試験場",
 ]
+
+# TARGET_VENUE が指定されている場合は、その試験場だけをチェックする。
+# (試験場ごとに実行を分けて、より短い間隔で回せるようにするため)
+_target_venue = os.environ.get("TARGET_VENUE", "").strip()
+VENUES = [_target_venue] if _target_venue else ALL_VENUES
+
 VENUE_RADIO_NAME = "placeChoice"
 
 # 何ヶ月先まで見るか(現状は1ヶ月先まで埋まっている想定なので少し余裕を持たせる)
@@ -45,8 +51,6 @@ PM_TEXT = "午後"
 STATE_FILE = os.environ.get("STATE_FILE", "state.json")
 
 # 通知先 (ntfy.sh の「トピック名」。GitHub Actions の Secrets 経由で環境変数に渡す)
-# ntfy はアカウント登録不要。スマホにntfyアプリを入れて、この名前のトピックを
-# 購読(subscribe)しておくだけで、ここにPOSTしたメッセージがプッシュ通知で届く。
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 
 # デバッグモード: 1 にするとステップごとにスクリーンショット/HTMLを artifacts/ に保存する
