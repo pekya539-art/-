@@ -1,8 +1,6 @@
 name: 本免学科試験キャンセル監視
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       debug:
@@ -25,9 +23,9 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: license-watch-${{ github.event.inputs.venue || 'all' }}
-  cancel-in-progress: false
+# concurrency は意図的に設定しない。
+# グループを設定すると、実行が2分を超えたときに後続の待機中リクエストが
+# キャンセルされ、そのサイクルのチェックが丸ごと飛んでしまうため。
 
 jobs:
   check:
@@ -62,6 +60,9 @@ jobs:
           TARGET_VENUE: ${{ github.event.inputs.venue }}
           MONTHS_AHEAD: ${{ github.event.inputs.months_ahead }}
           TEST_NOTIFY: ${{ github.event.inputs.test_notify == 'true' && '1' || '0' }}
+          # 試験場ごとに状態ファイルを分ける。1つのファイルを3ジョブで取り合うと
+          # git push が衝突して保存が失われ、同じ枠の通知が漏れたり重複したりするため。
+          STATE_FILE: ${{ github.event.inputs.venue && format('state_{0}.json', github.event.inputs.venue) || 'state.json' }}
         run: python scraper.py
 
       - name: Upload debug artifacts
@@ -73,14 +74,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
-      - name: Commit updated state.json
+      - name: Commit updated state files
         if: always()
         run: |
           git config user.name "license-watch-bot"
           git config user.email "actions@users.noreply.github.com"
-          if ! git diff --quiet -- state.json; then
-            git add state.json
-            git commit -m "chore: update state.json [skip ci]"
+          git add -A -- 'state*.json'
+          if git diff --cached --quiet; then
+            echo "状態ファイルに変更なし"
+          else
+            git commit -m "chore: update state [skip ci]"
             for i in 1 2 3 4 5; do
               if git push; then
                 echo "push succeeded"
@@ -90,6 +93,4 @@ jobs:
               git pull --rebase origin main || true
               sleep 3
             done
-          else
-            echo "state.json に変更なし"
           fi
