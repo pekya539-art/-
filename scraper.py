@@ -2,21 +2,10 @@
 """
 東京都 本免学科試験 予約カレンダー キャンセル監視スクリプト
 
-やること:
-  1. START_URL を開く
-  2. 「教習所卒業等」→「免許証のみ」を選択(実際のDOM構造に基づく確実なID指定)
-  3. 対象試験場(府中/鮫洲/江東)を選択(value属性の部分一致で確実に指定)
-  4. jQuery UI の datepicker で選択可能(data-handler="selectDay")な日付だけを順にクリック
-  5. 午前/午後それぞれの残席数(「残り○名」)を読み取る
-  6. 前回の記録(state.json)と比較し、0名→1名以上になったスロットを検知
-  7. 検知したら ntfy へ通知
-  8. 予約操作(氏名・生年月日等を入力する以降の画面へは絶対に進まない)
-
-このスクリプトは Playwright (Chromium) で動作する。
-実際にサイトのHTML(artifacts経由で取得)を確認した上で、
-テキストの部分一致ではなく、ID・name・value・data属性など
-一意に特定できる情報を使って要素を探すようにしてある。
+TEST_NOTIFY=1 の場合はサイトに一切アクセスせず、架空の日付(2099-01-01)に
+偽の空きがあるとして通知パイプラインだけを検証する「テストモード」で動く。
 """
+import os
 import re
 import sys
 import time
@@ -39,12 +28,10 @@ def log(msg: str) -> None:
 
 
 def ensure_artifact_dir():
-    import os
     os.makedirs(ARTIFACT_DIR, exist_ok=True)
 
 
 def dump_debug(page: Page, label: str) -> None:
-    """調査・デバッグ用にスクリーンショットとHTMLを保存する。"""
     if not config.DEBUG:
         return
     ensure_artifact_dir()
@@ -65,14 +52,13 @@ def is_forbidden_text(text: str) -> bool:
 
 
 def click_selector(page: Page, selector: str, description: str, timeout_ms: int = None) -> bool:
-    """CSSセレクタで一意に要素を指定してクリックする(見つからなければFalse)。"""
     timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
     try:
         loc = page.locator(selector).first
         loc.wait_for(state="visible", timeout=timeout_ms)
         text = (loc.inner_text() or "").strip()
         if is_forbidden_text(text):
-            raise RuntimeError(f"安全のため '{text}' のクリックは拒否しました(予約確定系の疑いがある文言)")
+            raise RuntimeError(f"安全のため '{text}' のクリックは拒否しました")
         loc.click(timeout=timeout_ms)
         time.sleep(config.ACTION_DELAY_SEC)
         return True
@@ -82,11 +68,6 @@ def click_selector(page: Page, selector: str, description: str, timeout_ms: int 
 
 
 def click_venue(page: Page, venue: str, timeout_ms: int = None) -> bool:
-    """
-    試験場のラジオボタンを、value属性の部分一致(例: value="270:府中試験場")で
-    一意に特定してクリックする。テキストの部分一致だと、注釈文の中に
-    試験場名が複数回出てくるページがあり誤爆するため使わない。
-    """
     timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
     selector = f'label:has(input[name="{config.VENUE_RADIO_NAME}"][value*="{venue}"])'
     try:
@@ -101,7 +82,6 @@ def click_venue(page: Page, venue: str, timeout_ms: int = None) -> bool:
 
 
 def wait_for_calendar(page: Page, timeout_ms: int = None) -> bool:
-    """日付選択カレンダー(jQuery UI datepicker)が表示されるのを待つ。"""
     timeout_ms = timeout_ms or config.NAV_TIMEOUT_MS
     try:
         page.locator("#datepicker table.ui-datepicker-calendar").wait_for(
@@ -113,27 +93,16 @@ def wait_for_calendar(page: Page, timeout_ms: int = None) -> bool:
 
 
 def get_selectable_day_cells(page: Page):
-    """
-    カレンダー上の「本当に選択できる日付セル」だけを返す。
-    jQuery UI datepicker では、選択可能な日には data-handler="selectDay" が
-    付与され、選択不可の日は ui-datepicker-unselectable / ui-state-disabled
-    が付き、クリックしても何も起きない。
-    """
     return page.locator("#datepicker td[data-handler='selectDay']")
 
 
 def go_to_next_month(page: Page, timeout_ms: int = None) -> bool:
-    """
-    「次へ」リンクをクリックして翌月に進む。
-    既に進めない(無効化されている)場合は False を返す。
-    """
     timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
     nxt = page.locator("a.ui-datepicker-next:not(.ui-state-disabled)")
     try:
         if nxt.count() == 0:
             return False
         nxt.first.click(timeout=timeout_ms)
-        # 月が切り替わるのを待つ(カレンダーが再描画されるまでの猶予)
         time.sleep(config.ACTION_DELAY_SEC)
         return True
     except PWTimeout:
@@ -141,25 +110,15 @@ def go_to_next_month(page: Page, timeout_ms: int = None) -> bool:
 
 
 def wait_for_time_panel(page: Page, timeout_ms: int = None) -> None:
-    """
-    日付クリック後、受付時間帯(午前/午後)の情報が表示されるのを待つ。
-    出ない場合もあるので、失敗しても例外にはしない(パネルが空のまま処理継続)。
-    """
     timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
     try:
         page.locator("#visitTimeChoiceList").wait_for(state="visible", timeout=timeout_ms)
-        # ローディング表示(空き状況を調べています)が消えるのも待つ
         page.locator("#waitVisitTimeList").wait_for(state="hidden", timeout=timeout_ms)
     except PWTimeout:
         pass
 
 
 def extract_seats_from_panel(panel_text: str):
-    """
-    日付クリック後に表示されるパネルのテキストから、
-    午前/午後それぞれの残席数を抽出する。
-    戻り値: {"am": int|None, "pm": int|None}
-    """
     result = {"am": None, "pm": None}
     if not panel_text:
         return result
@@ -187,10 +146,6 @@ def extract_seats_from_panel(panel_text: str):
 
 
 def collect_venue_results(page: Page, venue: str) -> dict:
-    """
-    1つの試験場について、START_URL から遷移し直して
-    { "YYYY-MM-DD": {"am": int, "pm": int}, ... } を返す。
-    """
     results = {}
 
     log(f"[{venue}] START_URL を開いています…")
@@ -236,8 +191,6 @@ def collect_venue_results(page: Page, venue: str) -> dict:
         log(f"[{venue}] 月{month_offset}: 選択可能な日付セル {cell_count} 件を確認")
 
         for i in range(cell_count):
-            # 日付をクリックするたびにDOMが再描画されるため、
-            # 毎回セル一覧を取り直してから i 番目を参照する。
             cell = get_selectable_day_cells(page).nth(i)
             try:
                 data_year = cell.get_attribute("data-year")
@@ -281,12 +234,87 @@ def collect_venue_results(page: Page, venue: str) -> dict:
     return results
 
 
+def scanned_month_keys() -> list:
+    """今回スキャン対象になった月("YYYY-MM"形式)の一覧。"""
+    today = datetime.now(JST).date()
+    keys = []
+    y, m = today.year, today.month
+    for _ in range(config.MONTHS_AHEAD):
+        keys.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+    return keys
+
+
+def reset_unseen_slots(state: dict, venue: str, venue_results: dict, month_keys: list) -> int:
+    """
+    今回スキャンした月・試験場のうち、カレンダーに出てこなかった日付は
+    「満席になって選択不可になった」とみなし、notified フラグを解除する。
+
+    このサイトは満席の日をカレンダーから消してしまうため、この処理が無いと
+    「残り0名」を一度も観測できず、notified が true のまま永久に残ってしまう。
+    その結果、一度通知した枠が再び空いても二度と通知されなくなる。
+    """
+    observed = set()
+    for date_str, seats in venue_results.items():
+        for ampm in ("am", "pm"):
+            if ampm in seats:
+                observed.add(state_store.slot_key(venue, date_str, ampm))
+
+    reset_count = 0
+    for key, val in state["slots"].items():
+        if key in observed:
+            continue
+        parts = key.split("|")
+        if len(parts) != 3:
+            continue
+        k_venue, k_date, _k_ampm = parts
+        if k_venue != venue:
+            continue
+        if k_date[:7] not in month_keys:
+            continue
+        if val.get("seats", 0) != 0 or val.get("notified", False):
+            state["slots"][key] = {"seats": 0, "notified": False}
+            reset_count += 1
+    return reset_count
+
+
+def process_venue_results(state: dict, venue: str, venue_results: dict) -> int:
+    """検知→重複防止→通知送信。戻り値は通知した件数。"""
+    count = 0
+    for date_str, seats in venue_results.items():
+        for ampm_key, ampm_label in (("am", "午前"), ("pm", "午後")):
+            if ampm_key not in seats:
+                continue
+            n = seats[ampm_key]
+            should_notify = state_store.evaluate_slot(state, venue, date_str, ampm_key, n)
+            if should_notify:
+                msg = notify.build_vacancy_message(venue, date_str, ampm_label, n)
+                sent = notify.send_notification(msg, priority="urgent")
+                log(f"[NOTIFY] {venue} {date_str} {ampm_label} 残り{n}名 送信={'成功' if sent else '失敗'}")
+                if sent:
+                    state_store.mark_notified(state, venue, date_str, ampm_key)
+                    count += 1
+    return count
+
+
 def run_once() -> int:
-    """
-    1回分の監視を実行する。戻り値は通知した件数。
-    """
     state = state_store.load_state()
     notify_count = 0
+
+    if os.environ.get("TEST_NOTIFY", "0") == "1":
+        # サイトには一切アクセスしない。通知パイプラインだけを本番と同じコードで検証する。
+        # 実在しない日付(2099-01-01)なので本物のデータと絶対に混ざらない。
+        test_venue = config.VENUES[0] if config.VENUES else "府中試験場"
+        log(f"[TEST_NOTIFY] テストモード: {test_venue} 2099-01-01 午前に偽の空き(1名)があるとして検証します")
+        notify_count += process_venue_results(state, test_venue, {"2099-01-01": {"am": 1}})
+        state_store.save_state(state)
+        return notify_count
+
+    month_keys = scanned_month_keys()
+    log(f"今回のスキャン対象月: {', '.join(month_keys)}")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -312,22 +340,11 @@ def run_once() -> int:
                 continue
 
             log(f"[{venue}] {len(venue_results)} 日分のデータを取得しました")
+            notify_count += process_venue_results(state, venue, venue_results)
 
-            for date_str, seats in venue_results.items():
-                for ampm_key, ampm_label in (("am", "午前"), ("pm", "午後")):
-                    if ampm_key not in seats:
-                        continue
-                    n = seats[ampm_key]
-                    should_notify = state_store.evaluate_slot(state, venue, date_str, ampm_key, n)
-                    if should_notify:
-                        msg = notify.build_vacancy_message(venue, date_str, ampm_label, n)
-                        sent = notify.send_notification(msg, priority="urgent")
-                        log(f"[NOTIFY] {venue} {date_str} {ampm_label} 残り{n}名 送信={'成功' if sent else '失敗'}")
-                        if sent:
-                            state_store.mark_notified(state, venue, date_str, ampm_key)
-                            notify_count += 1
-                        # 送信に失敗した場合は notified フラグを立てないので、
-                        # 次回の実行(最大5分後)で再度通知を試みる。
+            n_reset = reset_unseen_slots(state, venue, venue_results, month_keys)
+            if n_reset:
+                log(f"[{venue}] カレンダーから消えた {n_reset} 枠を満席とみなしてリセットしました")
 
             time.sleep(config.VENUE_DELAY_SEC)
 
