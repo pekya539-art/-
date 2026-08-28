@@ -17,6 +17,10 @@ on:
         description: "何ヶ月先まで見るか(空なら3)"
         type: string
         default: ""
+      test_notify:
+        description: "通知のテスト(サイトにはアクセスしない)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -57,6 +61,7 @@ jobs:
           DEBUG: ${{ github.event.inputs.debug == 'true' && '1' || '0' }}
           TARGET_VENUE: ${{ github.event.inputs.venue }}
           MONTHS_AHEAD: ${{ github.event.inputs.months_ahead }}
+          TEST_NOTIFY: ${{ github.event.inputs.test_notify == 'true' && '1' || '0' }}
         run: python scraper.py
 
       - name: Upload debug artifacts
