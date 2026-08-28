@@ -60,8 +60,6 @@ jobs:
           TARGET_VENUE: ${{ github.event.inputs.venue }}
           MONTHS_AHEAD: ${{ github.event.inputs.months_ahead }}
           TEST_NOTIFY: ${{ github.event.inputs.test_notify == 'true' && '1' || '0' }}
-          # 試験場ごとに状態ファイルを分ける。1つのファイルを3ジョブで取り合うと
-          # git push が衝突して保存が失われ、同じ枠の通知が漏れたり重複したりするため。
           STATE_FILE: ${{ github.event.inputs.venue && format('state_{0}.json', github.event.inputs.venue) || 'state.json' }}
         run: python scraper.py
 
@@ -74,16 +72,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
-      - name: Commit updated state files
+      - name: Commit updated state and history
         if: always()
         run: |
           git config user.name "license-watch-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add -A -- 'state*.json'
+          git add -A .
           if git diff --cached --quiet; then
-            echo "状態ファイルに変更なし"
+            echo "変更なし"
           else
-            git commit -m "chore: update state [skip ci]"
+            git commit -m "chore: update state/history [skip ci]"
             for i in 1 2 3 4 5; do
               if git push; then
                 echo "push succeeded"
