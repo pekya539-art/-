@@ -21,6 +21,11 @@ import state_store
 JST = timezone(timedelta(hours=9))
 ARTIFACT_DIR = "artifacts"
 
+# カレンダーは「表示された直後はまだ空き情報が反映されていない」ことがある。
+# 0件だった場合に、本当に0件なのかを確かめるための読み直し設定。
+EMPTY_RETRY_ATTEMPTS = 6
+EMPTY_RETRY_INTERVAL_SEC = 1.0
+
 
 def log(msg: str) -> None:
     ts = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S")
@@ -49,6 +54,14 @@ def dump_debug(page: Page, label: str) -> None:
 
 def is_forbidden_text(text: str) -> bool:
     return any(h in (text or "") for h in config.FORBIDDEN_BUTTON_TEXT_HINTS)
+
+
+def settle(page: Page, timeout_ms: int = 8000) -> None:
+    """進行中の通信が落ち着くまで待つ(空き情報の反映待ち)。"""
+    try:
+        page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    except PWTimeout:
+        pass
 
 
 def click_selector(page: Page, selector: str, description: str, timeout_ms: int = None) -> bool:
@@ -96,6 +109,28 @@ def get_selectable_day_cells(page: Page):
     return page.locator("#datepicker td[data-handler='selectDay']")
 
 
+def count_selectable_days(page: Page) -> int:
+    """
+    選択可能な日付の数を数える。0件だった場合は、まだ空き情報が反映されて
+    いないだけの可能性があるため、少し待って複数回読み直す。
+    これをやらないと、表示直後の空っぽのカレンダーを読んで
+    「空きゼロ」と誤判定してしまう。
+    """
+    count = 0
+    for i in range(EMPTY_RETRY_ATTEMPTS):
+        try:
+            count = get_selectable_day_cells(page).count()
+        except Exception:
+            count = 0
+        if count > 0:
+            if i > 0:
+                log(f"  (カレンダーの反映を {i} 回待ち直して {count} 件を検出)")
+            return count
+        if i < EMPTY_RETRY_ATTEMPTS - 1:
+            time.sleep(EMPTY_RETRY_INTERVAL_SEC)
+    return count
+
+
 def go_to_next_month(page: Page, timeout_ms: int = None) -> bool:
     timeout_ms = timeout_ms or config.ACTION_TIMEOUT_MS
     nxt = page.locator("a.ui-datepicker-next:not(.ui-state-disabled)")
@@ -104,6 +139,7 @@ def go_to_next_month(page: Page, timeout_ms: int = None) -> bool:
             return False
         nxt.first.click(timeout=timeout_ms)
         time.sleep(config.ACTION_DELAY_SEC)
+        settle(page)
         return True
     except PWTimeout:
         return False
@@ -178,6 +214,10 @@ def collect_venue_results(page: Page, venue: str) -> dict:
         dump_debug(page, f"{venue}_04_calendar_notfound")
         return results
 
+    # カレンダーの枠が出ただけでは空き情報が入っていないことがあるので、
+    # 通信が落ち着くまで待ってから読む。
+    settle(page)
+
     for month_offset in range(config.MONTHS_AHEAD):
         if month_offset > 0:
             if not go_to_next_month(page):
@@ -186,9 +226,11 @@ def collect_venue_results(page: Page, venue: str) -> dict:
 
         dump_debug(page, f"{venue}_month{month_offset}_calendar")
 
-        cells = get_selectable_day_cells(page)
-        cell_count = cells.count()
-        log(f"[{venue}] 月{month_offset}: 選択可能な日付セル {cell_count} 件を確認")
+        cell_count = count_selectable_days(page)
+        if cell_count == 0:
+            log(f"[{venue}] 月{month_offset}: 選択可能な日付セル 0 件(読み直し後も0件)")
+        else:
+            log(f"[{venue}] 月{month_offset}: 選択可能な日付セル {cell_count} 件を確認")
 
         for i in range(cell_count):
             cell = get_selectable_day_cells(page).nth(i)
@@ -197,7 +239,8 @@ def collect_venue_results(page: Page, venue: str) -> dict:
                 data_month = cell.get_attribute("data-month")  # 0始まり(0=1月)
                 day_link = cell.locator("a").first
                 data_date = day_link.get_attribute("data-date")
-            except Exception:
+            except Exception as e:  # noqa: BLE001
+                log(f"[{venue}] 月{month_offset} {i}番目のセル読み取りに失敗: {e}")
                 continue
 
             if not (data_year and data_month is not None and data_date):
@@ -205,7 +248,8 @@ def collect_venue_results(page: Page, venue: str) -> dict:
 
             try:
                 day_link.click(timeout=config.ACTION_TIMEOUT_MS)
-            except Exception:
+            except Exception as e:  # noqa: BLE001
+                log(f"[{venue}] 月{month_offset} {i}番目({data_date}日)のクリックに失敗: {e}")
                 continue
 
             wait_for_time_panel(page)
@@ -229,6 +273,7 @@ def collect_venue_results(page: Page, venue: str) -> dict:
                 if seats["pm"] is not None:
                     results[date_str]["pm"] = seats["pm"]
             else:
+                log(f"[{venue}] {data_date}日: 残席テキストを読み取れませんでした")
                 dump_debug(page, f"{venue}_month{month_offset}_day{i}_unparsed")
 
     return results
@@ -254,8 +299,8 @@ def reset_unseen_slots(state: dict, venue: str, venue_results: dict, month_keys:
     「満席になって選択不可になった」とみなし、notified フラグを解除する。
 
     このサイトは満席の日をカレンダーから消してしまうため、この処理が無いと
-    「残り0名」を一度も観測できず、notified が true のまま永久に残ってしまう。
-    その結果、一度通知した枠が再び空いても二度と通知されなくなる。
+    「残り0名」を一度も観測できず、notified が true のまま永久に残り、
+    その枠が再び空いても二度と通知されなくなる。
     """
     observed = set()
     for date_str, seats in venue_results.items():
@@ -305,8 +350,6 @@ def run_once() -> int:
     notify_count = 0
 
     if os.environ.get("TEST_NOTIFY", "0") == "1":
-        # サイトには一切アクセスしない。通知パイプラインだけを本番と同じコードで検証する。
-        # 実在しない日付(2099-01-01)なので本物のデータと絶対に混ざらない。
         test_venue = config.VENUES[0] if config.VENUES else "府中試験場"
         log(f"[TEST_NOTIFY] テストモード: {test_venue} 2099-01-01 午前に偽の空き(1名)があるとして検証します")
         notify_count += process_venue_results(state, test_venue, {"2099-01-01": {"am": 1}})
@@ -314,7 +357,7 @@ def run_once() -> int:
         return notify_count
 
     month_keys = scanned_month_keys()
-    log(f"今回のスキャン対象月: {', '.join(month_keys)}")
+    log(f"今回のスキャン対象月: {', '.join(month_keys)} / 状態ファイル: {config.STATE_FILE}")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -339,7 +382,16 @@ def run_once() -> int:
                 dump_debug(page, f"{venue}_ERROR")
                 continue
 
-            log(f"[{venue}] {len(venue_results)} 日分のデータを取得しました")
+            # 何を見たのかを必ずログに残す(取りこぼしたときの証拠になる)
+            if venue_results:
+                summary = ", ".join(
+                    f"{d}[午前{v.get('am', '-')}/午後{v.get('pm', '-')}]"
+                    for d, v in sorted(venue_results.items())
+                )
+                log(f"[{venue}] 取得内容: {summary}")
+            else:
+                log(f"[{venue}] 取得内容: なし(空きのある日が1件も見つかりませんでした)")
+
             notify_count += process_venue_results(state, venue, venue_results)
 
             n_reset = reset_unseen_slots(state, venue, venue_results, month_keys)
