@@ -181,6 +181,14 @@ def read_seat_panel(page: Page) -> str:
 
 
 def extract_seats_from_panel(panel_text: str):
+    """
+    午前/午後それぞれの残席数を抽出する。
+
+    パネルには免許証の区分ごとに複数行(例: マイナ免許証 / 従来の免許証)が
+    並ぶことがあり、最初の1件だけ読むと「残り0名」の行を拾って空きを
+    見落とす。そのため各時間帯に含まれる「残り○名」を全て拾い、最大値を
+    採用する(どれか1つでも空きがあれば通知したいため)。
+    """
     result = {"am": None, "pm": None}
     if not panel_text:
         return result
@@ -189,8 +197,8 @@ def extract_seats_from_panel(panel_text: str):
     pm_idx = panel_text.find(config.PM_TEXT)
 
     def seats_in(segment: str):
-        m = re.search(config.SEAT_TEXT_REGEX, segment)
-        return int(m.group(1)) if m else None
+        nums = [int(m) for m in re.findall(config.SEAT_TEXT_REGEX, segment)]
+        return max(nums) if nums else None
 
     if am_idx != -1 and pm_idx != -1:
         if am_idx < pm_idx:
@@ -277,6 +285,12 @@ def collect_venue_results(page: Page, venue: str) -> dict:
             panel_text = read_seat_panel(page)
             seats = extract_seats_from_panel(panel_text)
 
+            # 選択できる日なのに全て0名と読めた場合は、読み落としの疑いが濃い。
+            # 後から原因を追えるように、パネルの生テキストを残しておく。
+            if (seats["am"] or 0) == 0 and (seats["pm"] or 0) == 0:
+                snippet = (panel_text or "").replace("\n", " / ")[:300]
+                log(f"[{venue}] {data_date}日: 全て0名と判定 パネル内容=「{snippet}」")
+
             try:
                 date_str = f"{int(data_year):04d}-{int(data_month) + 1:02d}-{int(data_date):02d}"
             except ValueError:
@@ -289,7 +303,7 @@ def collect_venue_results(page: Page, venue: str) -> dict:
                 if seats["pm"] is not None:
                     results[date_str]["pm"] = seats["pm"]
             else:
-                snippet = (panel_text or "").replace("\n", " / ")[:200]
+                snippet = (panel_text or "").replace("\n", " / ")[:300]
                 log(f"[{venue}] {data_date}日: 残席を読み取れませんでした パネル内容=「{snippet}」")
                 dump_debug(page, f"{venue}_month{month_offset}_day{i}_unparsed")
 
