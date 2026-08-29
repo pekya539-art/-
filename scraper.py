@@ -313,13 +313,12 @@ def collect_venue_results(page: Page, venue: str) -> dict:
 
 def append_history(venue: str, changes: list) -> None:
     """
-    残席数が変化したものだけを history_<試験場>.jsonl に追記する。
+    変化があったものだけを history_<試験場>.jsonl に追記する。
 
     「日付は押せるのに残り0名」という状態が、
       (a) 直前にキャンセルが出て誰かが即座に取った後なのか
       (b) サイト側のカレンダーが古いまま押せる状態になっているだけなのか
-    を後から判別するための記録。0→N→0 の遷移が残っていれば(a)、
-    ずっと0のままなら(b)と分かる。
+    を後から判別するための記録。
     """
     if not changes:
         return
@@ -335,17 +334,21 @@ def append_history(venue: str, changes: list) -> None:
                     )
                     + "\n"
                 )
-        log(f"[{venue}] 残席の変化 {len(changes)} 件を {path} に記録しました")
+        log(f"[{venue}] 変化 {len(changes)} 件を {path} に記録しました")
     except OSError as e:
         log(f"[{venue}] 履歴の記録に失敗: {e}")
 
 
 def detect_changes(state: dict, venue: str, venue_results: dict, month_keys: list) -> list:
     """
-    state を更新する前に呼び出し、前回からの残席数の変化を洗い出す。
+    state を更新する前に呼び出し、前回からの変化を洗い出す。
     戻り値: [(slot_key, 変化前, 変化後), ...]
+
+    「新規」= その日付が新しくカレンダー上で選択可能になった、の意味。
+    残席0のまま出現したのか、席付きで出現したのかを区別するために記録する。
     """
     prev_seats = {k: v.get("seats", 0) for k, v in state["slots"].items()}
+    prev_known = set(state["slots"].keys())
     changes = []
     observed = set()
 
@@ -355,10 +358,11 @@ def detect_changes(state: dict, venue: str, venue_results: dict, month_keys: lis
                 continue
             key = state_store.slot_key(venue, date_str, ampm)
             observed.add(key)
-            before = prev_seats.get(key, 0)
             after = seats[ampm]
-            if before != after:
-                changes.append((key, before, after))
+            if key not in prev_known:
+                changes.append((key, "新規", after))
+            elif prev_seats.get(key, 0) != after:
+                changes.append((key, prev_seats.get(key, 0), after))
 
     # カレンダーから消えた枠(満席化)も 0 への変化として記録する
     for key, before in prev_seats.items():
