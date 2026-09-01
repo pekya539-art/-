@@ -153,8 +153,8 @@
       "seats": 0
     },
     "江東試験場|2026-10-07|am": {
-      "notified": true,
-      "seats": 1
+      "notified": false,
+      "seats": 0
     },
     "江東試験場|2026-10-07|pm": {
       "notified": false,
@@ -162,11 +162,11 @@
     },
     "江東試験場|2026-10-08|am": {
       "notified": true,
-      "seats": 72
+      "seats": 71
     },
     "江東試験場|2026-10-08|pm": {
       "notified": true,
-      "seats": 26
+      "seats": 27
     },
     "江東試験場|2026-10-09|am": {
       "notified": true,
@@ -186,7 +186,7 @@
     },
     "江東試験場|2026-10-14|am": {
       "notified": true,
-      "seats": 111
+      "seats": 112
     },
     "江東試験場|2026-10-14|pm": {
       "notified": true,
@@ -289,5 +289,5 @@
       "seats": 86
     }
   },
-  "updated_at": "2026-09-01T20:46:59.781749+09:00"
+  "updated_at": "2026-09-01T20:51:09.604949+09:00"
 }
