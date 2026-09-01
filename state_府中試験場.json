@@ -181,121 +181,121 @@
       "seats": 0
     },
     "府中試験場|2026-10-09|pm": {
-      "notified": true,
-      "seats": 1
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-13|am": {
-      "notified": true,
-      "seats": 45
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-13|pm": {
-      "notified": true,
-      "seats": 30
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-14|am": {
-      "notified": true,
-      "seats": 86
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-14|pm": {
-      "notified": true,
-      "seats": 67
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-15|am": {
-      "notified": true,
-      "seats": 82
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-15|pm": {
-      "notified": true,
-      "seats": 72
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-16|am": {
-      "notified": true,
-      "seats": 68
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-16|pm": {
-      "notified": true,
-      "seats": 60
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-19|am": {
-      "notified": true,
-      "seats": 81
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-19|pm": {
-      "notified": true,
-      "seats": 52
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-20|am": {
-      "notified": true,
-      "seats": 100
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-20|pm": {
-      "notified": true,
-      "seats": 87
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-21|am": {
-      "notified": true,
-      "seats": 101
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-21|pm": {
-      "notified": true,
-      "seats": 87
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-22|am": {
-      "notified": true,
-      "seats": 100
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-22|pm": {
-      "notified": true,
-      "seats": 89
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-23|am": {
-      "notified": true,
-      "seats": 100
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-23|pm": {
-      "notified": true,
-      "seats": 75
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-26|am": {
-      "notified": true,
-      "seats": 98
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-26|pm": {
-      "notified": true,
-      "seats": 80
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-27|am": {
-      "notified": true,
-      "seats": 102
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-27|pm": {
-      "notified": true,
-      "seats": 80
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-28|am": {
-      "notified": true,
-      "seats": 102
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-28|pm": {
-      "notified": true,
-      "seats": 88
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-29|am": {
-      "notified": true,
-      "seats": 96
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-29|pm": {
-      "notified": true,
-      "seats": 86
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-30|am": {
-      "notified": true,
-      "seats": 97
+      "notified": false,
+      "seats": 0
     },
     "府中試験場|2026-10-30|pm": {
-      "notified": true,
-      "seats": 72
+      "notified": false,
+      "seats": 0
     }
   },
-  "updated_at": "2026-09-02T00:07:09.262011+09:00"
+  "updated_at": "2026-09-02T00:09:50.481875+09:00"
 }
