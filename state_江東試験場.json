@@ -149,8 +149,8 @@
       "seats": 0
     },
     "江東試験場|2026-10-06|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 1
     },
     "江東試験場|2026-10-07|am": {
       "notified": false,
@@ -166,7 +166,7 @@
     },
     "江東試験場|2026-10-08|pm": {
       "notified": true,
-      "seats": 24
+      "seats": 23
     },
     "江東試験場|2026-10-09|am": {
       "notified": true,
@@ -289,5 +289,5 @@
       "seats": 86
     }
   },
-  "updated_at": "2026-09-01T21:35:00.637058+09:00"
+  "updated_at": "2026-09-01T21:37:14.122351+09:00"
 }
