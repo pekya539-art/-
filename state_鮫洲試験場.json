@@ -56,6 +56,14 @@
       "notified": false,
       "seats": 0
     },
+    "鮫洲試験場|2026-09-11|am": {
+      "notified": false,
+      "seats": 0
+    },
+    "鮫洲試験場|2026-09-11|pm": {
+      "notified": false,
+      "seats": 0
+    },
     "鮫洲試験場|2026-09-15|am": {
       "notified": false,
       "seats": 0
@@ -273,5 +281,5 @@
       "seats": 54
     }
   },
-  "updated_at": "2026-09-02T01:48:54.324049+09:00"
+  "updated_at": "2026-09-02T01:54:47.891166+09:00"
 }
