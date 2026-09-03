@@ -33,8 +33,8 @@
       "seats": 0
     },
     "江東試験場|2026-09-04|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 1
     },
     "江東試験場|2026-09-04|pm": {
       "notified": false,
@@ -305,5 +305,5 @@
       "seats": 86
     }
   },
-  "updated_at": "2026-09-04T02:36:54.023725+09:00"
+  "updated_at": "2026-09-04T02:38:44.895239+09:00"
 }
