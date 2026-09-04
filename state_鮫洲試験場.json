@@ -65,84 +65,108 @@
       "seats": 0
     },
     "鮫洲試験場|2026-09-09|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 2
     },
     "鮫洲試験場|2026-09-09|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
+    },
+    "鮫洲試験場|2026-09-10|am": {
+      "notified": true,
+      "seats": 3
+    },
+    "鮫洲試験場|2026-09-10|pm": {
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-09-11|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "鮫洲試験場|2026-09-11|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-09-14|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "鮫洲試験場|2026-09-14|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-09-15|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "鮫洲試験場|2026-09-15|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-09-16|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "鮫洲試験場|2026-09-16|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-09-17|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "鮫洲試験場|2026-09-17|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-09-18|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "鮫洲試験場|2026-09-18|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
+    },
+    "鮫洲試験場|2026-09-24|am": {
+      "notified": true,
+      "seats": 3
+    },
+    "鮫洲試験場|2026-09-24|pm": {
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-09-25|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "鮫洲試験場|2026-09-25|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-09-28|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "鮫洲試験場|2026-09-28|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-09-29|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "鮫洲試験場|2026-09-29|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 4
+    },
+    "鮫洲試験場|2026-09-30|am": {
+      "notified": true,
+      "seats": 3
+    },
+    "鮫洲試験場|2026-09-30|pm": {
+      "notified": true,
+      "seats": 4
     },
     "鮫洲試験場|2026-10-01|am": {
       "notified": false,
@@ -313,5 +337,5 @@
       "seats": 54
     }
   },
-  "updated_at": "2026-09-04T16:12:46.488817+09:00"
+  "updated_at": "2026-09-04T16:21:18.033751+09:00"
 }
