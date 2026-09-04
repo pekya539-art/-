@@ -81,12 +81,12 @@
       "seats": 0
     },
     "江東試験場|2026-09-14|am": {
-      "notified": true,
-      "seats": 1
+      "notified": false,
+      "seats": 0
     },
     "江東試験場|2026-09-14|pm": {
       "notified": true,
-      "seats": 7
+      "seats": 3
     },
     "江東試験場|2026-09-15|am": {
       "notified": true,
@@ -94,11 +94,11 @@
     },
     "江東試験場|2026-09-15|pm": {
       "notified": true,
-      "seats": 10
+      "seats": 8
     },
     "江東試験場|2026-09-16|am": {
       "notified": true,
-      "seats": 4
+      "seats": 3
     },
     "江東試験場|2026-09-16|pm": {
       "notified": true,
@@ -110,15 +110,15 @@
     },
     "江東試験場|2026-09-17|pm": {
       "notified": true,
-      "seats": 8
+      "seats": 9
     },
     "江東試験場|2026-09-18|am": {
       "notified": true,
-      "seats": 4
+      "seats": 5
     },
     "江東試験場|2026-09-18|pm": {
       "notified": true,
-      "seats": 10
+      "seats": 8
     },
     "江東試験場|2026-09-24|am": {
       "notified": true,
@@ -329,5 +329,5 @@
       "seats": 86
     }
   },
-  "updated_at": "2026-09-04T16:48:52.690862+09:00"
+  "updated_at": "2026-09-04T16:53:00.746581+09:00"
 }
