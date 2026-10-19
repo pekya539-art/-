@@ -257,12 +257,12 @@
       "seats": 0
     },
     "府中試験場|2026-10-19|am": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 2
     },
     "府中試験場|2026-10-19|pm": {
-      "notified": false,
-      "seats": 0
+      "notified": true,
+      "seats": 3
     },
     "府中試験場|2026-10-20|am": {
       "notified": false,
@@ -337,5 +337,5 @@
       "seats": 0
     }
   },
-  "updated_at": "2026-10-19T15:18:59.945407+09:00"
+  "updated_at": "2026-10-19T15:22:56.825702+09:00"
 }
