@@ -333,9 +333,9 @@
       "seats": 0
     },
     "鮫洲試験場|2026-10-30|pm": {
-      "notified": true,
-      "seats": 1
+      "notified": false,
+      "seats": 0
     }
   },
-  "updated_at": "2026-10-30T19:58:45.327450+09:00"
+  "updated_at": "2026-10-30T20:01:14.859515+09:00"
 }
